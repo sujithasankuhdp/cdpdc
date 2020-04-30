@@ -76,7 +76,7 @@ instances:
   # Variables for the new Fusion Cloud
   cloud: openstack
   interface: public
-  az: SE
+  az: "{{ az }}"
   subnet: "{{ subnet }}" #SE-GOES_INTERNAL_NET
   image: "CentOS 7"
   auto_ip: no
