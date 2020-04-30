@@ -1,0 +1,7 @@
+---
+- name: NOTHING TO DO
+  hosts: local
+  gather_facts: no
+  become: yes
+  tasks:
+    - include_vars: "{{ application }}"

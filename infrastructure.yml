@@ -1,0 +1,52 @@
+---
+- name: PROVISION HOSTS AND BUILD ANSIBLE HOSTS INVENTORY
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - include_vars: "{{ infra }}"
+
+    - name: ensure presence of instances and Ansible inventory
+      include_role:
+        name: cloud_instance
+      vars:
+        _infra: "{{ instances }}"
+        deployment_id: "{{ deployment_id }}"
+
+    - name: print Ansible inventory for reference
+      debug:
+        msg:
+          - "PRINT HOSTVARS"
+          - "{{ hostvars }}"
+
+- name: INSTALL RDBMS
+  hosts: db_server
+  become: yes
+  tasks:
+    - include_vars: "{{ infra }}"
+
+    - name: install RDBMS
+      include_role:
+        name: install_{{ db.type | lower }}
+      when: db.type is defined
+
+- name: INSTALL MIT KDC CLIENT
+  hosts: cdpdc
+  become: yes
+  tasks:
+    - include_vars: "{{ infra }}"
+
+    - name: install MIT KDC client
+      include_role:
+        name: krb_client
+      when: mitkdc
+
+- name: INSTALL MIT KDC SERVER
+  hosts: krb5_server
+  become: yes
+  tasks:
+    - include_vars: "{{ infra }}"
+
+    - name: install MIT KDC server
+      include_role:
+        name: krb_server

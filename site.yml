@@ -1,0 +1,20 @@
+- name: INFRASTRUCTURE
+  import_playbook: infrastructure.yml
+  vars:
+    infra: config/infrastructure.yml
+    vault: config/platform.yml # not needed, but can't be blank
+
+- name: PLATFORM
+  import_playbook: platform.yml
+  vars:
+    infra: config/infrastructure.yml
+    platform: config/platform.yml
+    vault: config/platform.yml # not needed, but can't be blank
+
+- name: APPLICATION
+  import_playbook: application.yml
+  vars:
+    infra: config/infrastructure.yml
+    platform: config/platform.yml
+    application: config/application.yml
+    vault: config/platform.yml # not needed, but can't be blank

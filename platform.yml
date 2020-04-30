@@ -1,0 +1,133 @@
+---
+- name: CONFIG HOSTS FOR CDP DC
+  hosts: cdpdc
+  gather_facts: yes
+  become: yes
+  tasks:
+    - include_vars: "{{ vault }}"
+    - include_vars: "{{ infra }}"
+    - include_vars: "{{ platform }}"
+
+    - name: configure OS for all servers
+      include_role:
+        name: os_config
+      vars:
+        _cloud_provider: "{{ instances.cloud }}"
+
+- name: INSTALL MYSQL CONNECTOR
+  hosts: cdpdc
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: install mysql connector
+      include_role:
+        name: mysqlconnectorjava
+
+- name: CONFIGURE CM DATABASES
+  hosts: db_server
+  become: yes
+  tasks:
+    - include_vars: "{{ platform }}"
+
+    - name: configure CM databases
+      include_role:
+        name: cm_databases
+      vars:
+        rdbms_type: "{{ cdpdc.cm.db.type }}"
+        db_list: "{{ cdpdc.cm.db.list }}"
+    
+    # TODO: PGSQL is temporary only
+    - name: install and config pgsql for ranger
+      include_tasks: scripts/pgsql.yml
+
+- name: INSTALL AND CONFIGURE SMM REQUIREMENTS 
+  hosts: cdf
+  become: yes
+  tasks:
+    - name: SMM install libs
+      yum:
+        name:
+          - gcc-c++ 
+          - make
+        state: latest
+
+    - name: SMM run script
+      shell: |
+        curl -sL https://rpm.nodesource.com/setup_10.x | sudo -E bash - 
+
+    - name: SMM install nodejs
+      yum:
+        name: nodejs
+        state: latest
+
+    - name: SMM install npn libs
+      shell: |
+        npm install forever -g 
+
+
+- name: INSTALL AND CONFIGURE CEM EFM
+  hosts: efm
+  become: yes
+  gather_facts: yes
+  tasks:
+    - include_vars: "{{ platform }}"
+
+    - name: install EFM
+      include_role:
+        name: efm
+
+- name: INSTALL AND CONFIGURE CEM MINIFI
+  hosts: minifi
+  become: yes
+  gather_facts: yes
+  tasks:
+    - include_vars: "{{ platform }}"
+
+    - name: install MINIFI
+      include_role:
+        name: minifi
+
+- name: SETUP THE CLOUDERA MANAGER AGENTS
+  hosts: cdpdc
+  become: yes
+  tasks:
+    - include_vars: "{{ platform }}"
+    - include_vars: "{{ infra }}"
+
+    - name: Install and configure the Cloudera Manager agent
+      include_role:
+        name: cm_agent
+      vars: 
+        _cm_server_hostname: "{{ hostvars[groups.cm_server[0]].private_hostname }}" 
+        _repo_file: "{{ cdpdc.cm.repo_file }}"
+
+
+# - name: CONFIG HOSTS FOR CDP DC
+#   hosts: cdpdc
+#   gather_facts: no
+#   become: yes
+#   tasks:
+#     - shell: service cloudera-scm-agent stop
+#     - fail:
+
+- name: PROVISION CMS AND CLUSTER
+  hosts: cm_server
+  become: yes
+  tasks:
+    - include_vars: "{{ vault }}"
+    - include_vars: "{{ platform }}"
+    
+    # - name: create list with all hosts private hostnames
+    #   set_fact:
+    #     _m: "{{ hostvars[item].private_hostname }}"
+    #   loop: "{{ groups.cdpdc }}"
+    #   register: m
+
+    - name: Install cm server and deploy cluster template
+      include_role:
+        name: cm_server
+      # vars:
+      #   _hosts: "{{ m.results | map(attribute='ansible_facts._m') | list }}"
+
+
+
